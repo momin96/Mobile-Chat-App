@@ -15,6 +15,8 @@ enum XMPPError: Error {
 
 class XMPPController: NSObject {
     
+    static let sharedInstance = XMPPController()
+    
     var stream: XMPPStream?
     
     var hostName: String?
@@ -22,10 +24,17 @@ class XMPPController: NSObject {
     var hostPort: UInt16?
     var password: String?
     
-    init(withHostName name: String, userJID jid: String, hostPort port: UInt16, password pwd: String) throws {
+    override init() {
+        self.stream = XMPPStream()
+        super.init()
+        self.stream?.addDelegate(self, delegateQueue: DispatchQueue.main)
+    }
+    
+    func connect(withHostName name: String, userJID jid: String, hostPort port: UInt16, password pwd: String) {
         
         guard let uJID = XMPPJID(string: jid) else {
-            throw XMPPError.wrongUserJID
+            return
+//            throw XMPPError.wrongUserJID
         }
         
         hostName    = name
@@ -34,27 +43,27 @@ class XMPPController: NSObject {
         password    = pwd
         
         // Stream Configuration
-        stream = XMPPStream()
         stream?.hostName = name
         stream?.myJID = uJID
         stream?.hostPort = port
         stream?.startTLSPolicy = .allowed
         
-        super.init()
-        
-        stream?.addDelegate(self, delegateQueue: DispatchQueue.main)
-    }
-    
-    func connect() {
-        if !stream!.isDisconnected {
-            return
+        if stream!.isDisconnected {
+            do {
+                try stream?.connect(withTimeout: 10)
+            }
+            catch let e {
+                print(e.localizedDescription)
+            }
         }
-        
-        try! stream?.connect(withTimeout: XMPPStreamTimeoutNone)
     }
 }
 
 extension XMPPController: XMPPStreamDelegate {
+    
+    func xmppStream(_ sender: XMPPStream, socketDidConnect socket: GCDAsyncSocket) {
+        print(#function)
+    }
     
     func xmppStreamDidConnect(_ sender: XMPPStream) {
         print("Stream Connected")
@@ -65,4 +74,32 @@ extension XMPPController: XMPPStreamDelegate {
         print("Stream: Authnticated")
         stream?.send(XMPPPresence())
     }
+    
+    func xmppStreamWillConnect(_ sender: XMPPStream) {
+        print("xmppStreamWillConnect")
+        print(sender.isConnecting)
+        print(sender.isConnected)
+    }
+    
+    func xmppStreamConnectDidTimeout(_ sender: XMPPStream) {
+        print(#function)
+    }
+    
+    func xmppStream(_ sender: XMPPStream, didReceiveError error: DDXMLElement) {
+        print(#function)
+        print(error)
+    }
+    
+    func xmppStreamDidRegister(_ sender: XMPPStream) {
+        print(#function)
+    }
+    
+    func xmppStream(_ sender: XMPPStream, didNotRegister error: DDXMLElement) {
+        print(error)
+    }
+    
+    func xmppStreamDidStartNegotiation(_ sender: XMPPStream) {
+        print(sender)
+    }
+    
 }

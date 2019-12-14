@@ -7,19 +7,23 @@
 //
 
 import UIKit
+import XMPPFramework
 
-class ViewController: UIViewController {
-
-    var xmppController: XMPPController?
+class ViewController: UIViewController, XMPPStreamDelegate {
     
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        try! self.xmppController = XMPPController(withHostName: "host.com", userJID: "user@host.com", hostPort: 5222, password: "password")
+        XMPPController.sharedInstance.stream?.addDelegate(self, delegateQueue: DispatchQueue.main)
         
-        self.xmppController?.connect()
+        XMPPController.sharedInstance.connect(withHostName: "host.com", userJID: "user@host.com", hostPort: 5222, password: "password")
     }
-
-
+    
+    func xmppStreamDidAuthenticate(_ sender: XMPPStream) {
+           print(#function)
+       }
+       
+       func xmppStream(_ sender: XMPPStream, didNotAuthenticate error: DDXMLElement) {
+           print(error)
+       }
 }
-
